@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section>
+  <h1>Opções de replanejamento</h1>
+  <p>Ocorrência: {{ analise.ocorrencia.tipo.value }} – {{ nome_do_recurso(analise.ocorrencia, centro) }} · ★ menor impacto</p>
+  <p>Período: {{ analise.ocorrencia.periodo.inicio|data_hora }} a {{ analise.ocorrencia.periodo.fim|data_hora }}{% if analise.ocorrencia.descricao %} · {{ analise.ocorrencia.descricao }}{% endif %}</p>
+  <p>Cirurgias afetadas ({{ analise.afetadas|length }}):
+    {% for c in analise.afetadas %}{{ c.horario.inicio|dia_e_hora }} {{ centro.cadastros.sala(c.sala_id).nome }} {{ rotulo_cirurgia(centro, c) }}{% if not loop.last %} · {% endif %}{% endfor %}
+  </p>
+  <form method="post" action="/decisao" data-envio-sem-recarregar>
+    <div class="cards">
+      {% for opcao in opcoes %}
+      <label class="card">
+        <input type="radio" name="opcao" value="{{ loop.index0 }}" {% if loop.first %}checked{% endif %} style="width:auto">
+        <strong>Opção {{ LETRAS[loop.index0] }}{% if loop.first %} ★{% endif %}</strong> – {{ opcao.descricao }}<br>
+        Tempo de sala perdido: <strong>{{ opcao.impacto.tempo_sala_perdido_min|duracao }}</strong><br>
+        Pacientes afetados: <strong>{{ opcao.impacto.pacientes_afetados }}</strong><br>
+        Restrição no limite: {{ opcao.impacto.restricoes_no_limite|join(", ") or "nenhuma" }}
+        <ul>{% for m in opcao.movimentos %}<li>{{ rotulo_cirurgia(centro, m.original) }}: {{ descrever(m, centro) }}</li>{% endfor %}</ul>
+      </label>
+      {% endfor %}
+    </div>
+    <label for="justificativa">Justificativa (responsável: {{ responsavel }})</label>
+    <textarea id="justificativa" name="justificativa" rows="2" placeholder="descreva a justificativa..."></textarea>
+    <label><input type="checkbox" name="confirmado" value="1" style="width:auto"> Confirmo a decisão</label>
+    <button type="submit" name="acao" value="rejeitar">Rejeitar todas</button>
+    <button type="submit" name="acao" value="aplicar"><strong>Aplicar opção</strong></button>
+  </form>
+</section>
+{% endblock %}

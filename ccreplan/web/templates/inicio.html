@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+{% block conteudo %}
+<section>
+  <h1>Programação dos próximos 3 dias</h1>
+  {% for rotulo, dia in dias %}
+  <h2 style="margin-top: 14px">{{ rotulo }} · {{ dia.strftime("%d/%m/%Y") }}</h2>
+  <table>
+    <tr><th>Sala</th><th>Cirurgias</th></tr>
+    {% for sala in centro.cadastros.salas %}
+    <tr>
+      <td>{{ sala.nome }}</td>
+      <td>
+        {% for linha in linhas_da_programacao(centro, sala.id, dia) %}
+        <div {% if linha.riscada %}class="riscada" {% endif %}title="{{ detalhes_cirurgia(centro, linha.cirurgia) }}" style="cursor: help">{{ linha.horario }} {{ rotulo_cirurgia(centro, linha.cirurgia) }}
+          <span class="situacao">({{ linha.situacao }})</span></div>
+        {% endfor %}
+      </td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% endfor %}
+</section>
+
+<section>
+  <h1>Registrar ocorrência</h1>
+  <form method="post" action="/ocorrencias" data-envio-sem-recarregar>
+    <label for="tipo">Tipo de ocorrência</label>
+    <select id="tipo" name="tipo">
+      {% for tipo in tipos %}<option value="{{ tipo.name }}">{{ tipo.value }}</option>{% endfor %}
+    </select>
+    <label for="recurso">Recurso afetado</label>
+    <select id="recurso" name="recurso">
+      {% for tipo in tipos %}
+      <optgroup label="{{ tipo.value }}">
+        {% for rid, rotulo in recursos[tipo.name] %}<option value="{{ rid }}">{{ rotulo }}</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+    </select>
+    <script type="application/json" id="recursos-por-tipo">{{ recursos|tojson }}</script>
+    <script>
+      // Mostra no "Recurso afetado" só os itens do tipo de ocorrência escolhido.
+      (() => {
+        const recursos = JSON.parse(document.getElementById("recursos-por-tipo").textContent);
+        const tipo = document.getElementById("tipo");
+        const recurso = document.getElementById("recurso");
+        const filtrar = () =>
+          recurso.replaceChildren(...recursos[tipo.value].map(([id, rotulo]) => new Option(rotulo, id)));
+        tipo.addEventListener("change", filtrar);
+        filtrar();
+      })();
+    </script>
+    <label for="descricao">Descrição (opcional)</label>
+    <textarea id="descricao" name="descricao" rows="2" placeholder="descreva a ocorrência..."></textarea>
+    <fieldset style="border: 1px solid #ccc; margin-top: 8px">
+      <legend>Período em que o recurso ficará afetado: data e hora de início e de fim (no atraso, o período do atraso)</legend>
+      <label for="inicio">Início</label>
+      <input id="inicio" name="inicio" type="datetime-local" value="{{ inicio_padrao }}">
+      <label for="fim">Fim</label>
+      <input id="fim" name="fim" type="datetime-local" value="{{ fim_padrao }}">
+    </fieldset>
+    <label for="quantidade">Quantidade indisponível (só para instrumentos)</label>
+    <input id="quantidade" name="quantidade" type="number" min="1" value="1">
+    <label>Ação</label>
+    <label><input type="radio" name="acao" value="adiar" checked style="width:auto"> Adiar</label>
+    <label><input type="radio" name="acao" value="cancelar" style="width:auto"> Cancelar</label>
+    <button type="submit">Registrar e gerar opções</button>
+  </form>
+</section>
+
+<section>
+  <h1>Histórico de auditoria</h1>
+  {% if decisoes %}
+  <table>
+    <tr><th>Data/hora</th><th>Ocorrência</th><th>Opção adotada</th><th>Responsável</th><th>Justificativa</th></tr>
+    {% for d in decisoes|reverse %}
+    <tr>
+      <td>{{ d.momento.strftime("%d/%m %H:%M") }}</td>
+      <td>{{ d.ocorrencia.tipo.value }}</td>
+      <td>{{ "Rejeitadas" if d.rejeitada else d.opcao_adotada }}</td>
+      <td>{{ d.responsavel }}</td>
+      <td>{{ d.justificativa }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  {% else %}
+  <p>Nenhuma decisão registrada.</p>
+  {% endif %}
+</section>
+{% endblock %}

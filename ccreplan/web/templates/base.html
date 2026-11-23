@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CC·Replan</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f4f4; color: #111; }
+    header { background: #fff; border-bottom: 1px solid #ccc; padding: 10px 24px; display: flex; justify-content: space-between; }
+    main { max-width: 1000px; margin: 20px auto; padding: 0 16px; }
+    section { background: #fff; border: 1px solid #ccc; border-radius: 6px; padding: 16px; margin-bottom: 16px; }
+    h1 { font-size: 20px; margin: 0 0 12px; } h2 { font-size: 16px; margin: 0 0 10px; }
+    table { border-collapse: collapse; width: 100%; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 6px; text-align: left; vertical-align: top; }
+    th { background: #eee; }
+    label { display: block; margin: 8px 0 3px; font-size: 14px; }
+    input, select, textarea { padding: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
+    button { padding: 8px 14px; margin-top: 10px; cursor: pointer; }
+    .aviso { background: #fff7d1; border: 1px solid #c9a800; padding: 10px; border-radius: 6px; margin-bottom: 16px; }
+    .cards { display: flex; gap: 12px; flex-wrap: wrap; }
+    .card { border: 1px solid #999; border-radius: 6px; padding: 10px; flex: 1 1 220px; font-size: 14px; }
+    .situacao { color: #555; font-size: 12px; }
+    .riscada { text-decoration: line-through; color: #888; }
+  </style>
+</head>
+<body>
+  <header><strong>CC·Replan</strong><span>Clínica São Lucas · plano Básico (3 salas) · Ana Souza</span></header>
+  <main>
+    {% for mensagem in get_flashed_messages() %}<div class="aviso">{{ mensagem }}</div>{% endfor %}
+    <div id="aviso-formulario" class="aviso" role="alert" hidden></div>
+    {% block conteudo %}{% endblock %}
+  </main>
+  <script>
+    // Envia os formulários sem recarregar a página: os campos preenchidos não se perdem.
+    document.querySelectorAll("form[data-envio-sem-recarregar]").forEach((form) => {
+      form.addEventListener("submit", async (evento) => {
+        evento.preventDefault();
+        const aviso = document.getElementById("aviso-formulario");
+        const resposta = await fetch(form.action, {
+          method: "POST",
+          body: new FormData(form, evento.submitter),
+          headers: { Accept: "application/json" },
+        });
+        const dados = await resposta.json();
+        if (dados.proxima) {
+          window.location.assign(dados.proxima);
+          return;
+        }
+        aviso.textContent = dados.mensagem;
+        aviso.hidden = false;
+        aviso.scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    });
+  </script>
+</body>
+</html>
